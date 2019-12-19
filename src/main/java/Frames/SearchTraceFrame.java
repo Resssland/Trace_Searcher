@@ -194,7 +194,7 @@ public class SearchTraceFrame {
 
 
         private void GetTraceSessions(Config config){
-            String command="find /data/brt/BRT/current/logs/ -mindepth 1  -newermt '"+TimeConvertor.CalendarToString(config.getDateFrome())+"' ! -newermt '"+TimeConvertor.CalendarToString(config.getDateTo())+"' -exec zgrep '= "+config.getMsisdn()+"' {} \\;";
+            String command="find /data/brt/BRT/current/logs/ -mindepth 1  -newermt '"+TimeConvertor.CalendarToString(config.getDateFrome())+"' ! -newermt '"+TimeConvertor.CalendarToString(config.getDateTo())+"' -exec zgrep '= "+config.getMsisdn()+"' {} \\; | hrs";
             Logger.log("Command of searching sessions:"+command,null);
             StartButton.setEnabled(false);
             String rowSessions1=SSHConector.bashExecutor(config,config.getHost()+"-lbrt-app01",command,"brt");
@@ -257,7 +257,7 @@ public class SearchTraceFrame {
             int selectedRowIndex= ResultTable.getSelectedRow();
             if(selectedRowIndex!=-1){
                 //Convert Time
-                Object selectedSession = ResultTable.getValueAt(selectedRowIndex, 1);
+                Object selectedSession = ResultTable.getValueAt(selectedRowIndex, 1).toString().substring(1,ResultTable.getValueAt(selectedRowIndex, 1).toString().length()-1);
                 Object selectedDate = ResultTable.getValueAt(selectedRowIndex, 0);
                 Object instanceBRT = ResultTable.getValueAt(selectedRowIndex, 3);
 
@@ -304,7 +304,7 @@ public class SearchTraceFrame {
 
             int selectedRowIndex= ResultTable.getSelectedRow();
             if(selectedRowIndex!=-1) {
-                Object selectedSession = ResultTable.getValueAt(selectedRowIndex, 1);
+                Object selectedSession = ResultTable.getValueAt(selectedRowIndex, 1).toString().substring(1,ResultTable.getValueAt(selectedRowIndex, 1).toString().length()-1);
                 Object selectedDate = ResultTable.getValueAt(selectedRowIndex, 0);
                 Object instanceBRT = ResultTable.getValueAt(selectedRowIndex, 3);
 
