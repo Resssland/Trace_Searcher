@@ -194,7 +194,7 @@ public class SearchTraceFrame {
 
 
         private void GetTraceSessions(Config config){
-            String command="find /data/brt/BRT/current/logs/ -mindepth 1  -newermt '"+TimeConvertor.CalendarToString(config.getDateFrome())+"' ! -newermt '"+TimeConvertor.CalendarToString(config.getDateTo())+"' -exec zgrep '"+config.getMsisdn()+"' {} \\; | hrs";
+            String command="find /data/brt/BRT/current/logs/ -mindepth 1  -newermt '"+TimeConvertor.CalendarToString(config.getDateFrome())+"' ! -newermt '"+TimeConvertor.CalendarToString(config.getDateTo())+"' -exec zgrep '"+config.getMsisdn()+"' {} \\; | grep hrs";
             Logger.log("Command of searching sessions:"+command,null);
             StartButton.setEnabled(false);
             String rowSessions1=SSHConector.bashExecutor(config,config.getHost()+"-lbrt-app01",command,"brt");
