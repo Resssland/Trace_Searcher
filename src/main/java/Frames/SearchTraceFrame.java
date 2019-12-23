@@ -229,7 +229,7 @@ public class SearchTraceFrame {
             Logger.log("Count of session rows in slave:"+slaveSessionCount,null);
 
         }
-
+		
         private Dictionary GetVocabulary(Config conf,String host){
             String command="zgrep [OffPost]Rating /data/brt/BRT/current/conf/brt_srv.xml | cut -d '\\\"' -f '4 5 6'";
             String hoststr=conf.getHost()+host;
@@ -238,7 +238,7 @@ public class SearchTraceFrame {
             String[] arrayREsult=result.split("\n");
             for (int i=0;i<arrayREsult.length;i++){
                 String[] tmp=arrayREsult[i].split("\"");
-                resultVocabulary.put(tmp[0],tmp[2]);
+                if(tmp.length==3)resultVocabulary.put(tmp[0],tmp[2]);
             }
             return resultVocabulary;
         }
