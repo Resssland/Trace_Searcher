@@ -102,8 +102,10 @@ public class SSHConector {
 
     public static void bashExecutorInFile(Config configuration, String host, String command,String fileName,String sudoUser) {
         String data=bashExecutor(configuration,host,command,sudoUser);
-        File file =new File(configuration.getPath()+"\\"+fileName);
+        String path=new File(".").getAbsolutePath();
+        File file =new File(path+"\\"+fileName);
         try {
+
             OutputStream os = new FileOutputStream(file);
             os.write(data.getBytes());
             os.close();

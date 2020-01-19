@@ -29,7 +29,7 @@ public class Config {
 
 
     }
-    private ArrayList<ArrayList<String>> hosts;
+    private ArrayList<ArrayList<String>> hosts=new ArrayList<ArrayList<String>>();
     private String user;
     private String mfPassword;
     private long msisdn;
@@ -129,10 +129,11 @@ public class Config {
                 reader.close();
             }
             catch (IOException e){e.printStackTrace();}
+            System.out.println(new String(rowHosts));
             Pattern rowPattern=Pattern.compile("<\\s*macro\\s*=\\s*\"\\w+\"\\s*\\,\\s*id\\s*=\".+\"\\s*\\,\\s*host\\s*=\\s*\".+\"\\s*>");
-            Matcher rowMatch =rowPattern.matcher(rowHosts.toString());
+            Matcher rowMatch =rowPattern.matcher(new String(rowHosts));
             while(rowMatch.find()){
-                String[] tempString=rowHosts.toString().substring(rowMatch.start(),rowMatch.end()).split(",");
+                String[] tempString=(new String(rowHosts)).substring(rowMatch.start(),rowMatch.end()).split(",");
                 String macro=tempString[0].split("\"")[1];
                 String id=tempString[1].split("\"")[1];
                 String host=tempString[2].split("\"")[1];

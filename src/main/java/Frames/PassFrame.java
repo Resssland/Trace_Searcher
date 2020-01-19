@@ -102,6 +102,7 @@ public class PassFrame {
                 }
                 else{
                     Logger.log("MF password not confirm", jf);
+                    MFField.setText("");
                 }
                 if(hostsFileField.getText()!=null && !hostsFileField.getText().equals("")) {
                     conf.setPath(hostsFileField.getText());
