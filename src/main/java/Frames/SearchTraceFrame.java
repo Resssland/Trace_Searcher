@@ -30,6 +30,8 @@ public class SearchTraceFrame {
     private JButton GetInfoButton;
     private JButton GetBrtTrace;
 
+    private ArrayList<Dictionary> vocabularyHRS;
+
     public SearchTraceFrame(Config configuration) {
         this.configuration=configuration;
         JFrame SearchTraceMainFraim = new JFrame("Search a trace");
@@ -86,7 +88,7 @@ public class SearchTraceFrame {
         JLabel DateToLabel=new JLabel("Date to:");
         DateToLabel.setFont(new Font("Arial Narrow",Font.BOLD,16));
 
-         StartButton=new JButton("Start");
+        StartButton=new JButton("Start");
         SubsField.setFont(new Font("Arial Narrow",Font.PLAIN,16));
 
         TopPanel.add(SubsLabel);
@@ -143,7 +145,7 @@ public class SearchTraceFrame {
         BottomPanel.setLayout(new GridLayout(1,3,20,20));
 
         GetInfoButton=new JButton("Get more info");
-         GetBrtTrace =new JButton("Get BRT trace");
+        GetBrtTrace =new JButton("Get BRT trace");
         JButton GetHrsTrace=new JButton("Get HRS trace");
 
         BottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -172,7 +174,7 @@ public class SearchTraceFrame {
                 configuration.setMsisdn(msisdn);
                 configuration.setDateFrome(
                         TimeConvertor.StickTogetherTime(
-                        DateFromePicker.getDate(),((Date) DateFromeTimeSpinner.getValue())
+                                DateFromePicker.getDate(),((Date) DateFromeTimeSpinner.getValue())
                         )
                 );
                 configuration.setDateTo(TimeConvertor.StickTogetherTime(DateToPicker.getDate(),((Date) DateToTimeSpinner.getValue())));
@@ -194,31 +196,54 @@ public class SearchTraceFrame {
 
 
         private void GetTraceSessions(Config config){
-            String command="find /data/brt/BRT/current/logs/ -mindepth 1  -newermt '"+TimeConvertor.CalendarToString(config.getDateFrome())+"' ! -newermt '"+TimeConvertor.CalendarToString(config.getDateTo())+"' -exec zgrep '"+config.getMsisdn()+"' {} \\; | grep hrs";
+            String command="find /data/brt/BRT/current/logs/ -mindepth 1  -newermt '"+TimeConvertor.CalendarToString(config.getDateFrome())+"' ! -newermt '"+TimeConvertor.CalendarToString(config.getDateTo())+"' -exec zgrep '= "+config.getMsisdn()+"' {} \\; | grep hrs";
             Logger.log("Command of searching sessions:"+command,null);
             StartButton.setEnabled(false);
-            String rowSessions1=SSHConector.bashExecutor(config,config.getHost()+"-lbrt-app01",command,"brt");
-            String rowSessions2=SSHConector.bashExecutor(config,config.getHost()+"-lbrt-app02",command,"brt");
+            ArrayList<String> rowSessions=new ArrayList<String>();
+            if(config.getCurrentHosts()!=null && !config.getCurrentHosts().isEmpty()){
+                for(int i=1;i<config.getCurrentHosts().size();i+=2)
+                {
+                    rowSessions.add(config.getCurrentHosts().get(i-1));//id
+                    rowSessions.add(config.getCurrentHosts().get(i));//host
+                    rowSessions.add(SSHConector.bashExecutor(config, config.getCurrentHosts().get(i), command, "brt"));//sessions
+                    vocabularyHRS.add(GetVocabulary(configuration,config.getCurrentHosts().get(i)));
+                }
+            }
+            else {
+                rowSessions.add("M0");
+                rowSessions.add(config.getMacro() + "-lbrt-app01");
+                rowSessions.add(SSHConector.bashExecutor(config, config.getMacro() + "-lbrt-app01", command, "brt"));
+                vocabularyHRS.add(GetVocabulary(configuration,config.getMacro() + "-lbrt-app02"));
+                rowSessions.add("S0");
+                rowSessions.add(config.getMacro() + "-lbrt-app02");
+                rowSessions.add(SSHConector.bashExecutor(config, config.getMacro() + "-lbrt-app02", command, "brt"));
+                vocabularyHRS.add(GetVocabulary(configuration,config.getMacro() + "-lbrt-app02"));
+            }
             StartButton.setEnabled(true);
-            LoadToTableRowSession(rowSessions1,rowSessions2);
+            LoadToTableRowSession(rowSessions);
         }
 
-        private void LoadToTableRowSession(String rowString1,String rowString2){
-            Dictionary vocabularyHRSMaster=GetVocabulary(configuration,"-lbrt-app01");
-            Dictionary vocabularyHRSSlave=GetVocabulary(configuration,"-lbrt-app02");
+        private void LoadToTableRowSession(ArrayList<String> rowSessions){
 
-            int masterSessionCount=0;
-            int slaveSessionCount=0;
+            //Dictionary vocabularyHRSMaster=GetVocabulary(configuration,"-lbrt-app01");
+            //Dictionary vocabularyHRSSlave=GetVocabulary(configuration,"-lbrt-app02");
+
+            int SessionCount=0;
+            int vocabularyIndex=0;
             model.setRowCount(0);
             Pattern pattern= Pattern.compile("20.+= "+configuration.getMsisdn()+"");
-            Matcher match =pattern.matcher(rowString1);
-            while (match.find()){
+            for(int i=2;i<rowSessions.size();i+=3) {
+                Matcher match = pattern.matcher(rowSessions.get(i));
+                while (match.find()) {
 
-                String tempArr[]=rowString1.substring(match.start(),match.end()).split(" ");
-                model.addRow(new Object[]{TimeConvertor.CalendarToString(TimeConvertor.StringToCalendar(tempArr[0]+" "+tempArr[1])),tempArr[5],vocabularyHRSMaster.get(tempArr[3].substring(5,tempArr[3].length()-1)),"LM0"});
-                masterSessionCount++;
+                    String tempArr[] = rowSessions.get(i).substring(match.start(), match.end()).split(" ");
+                    model.addRow(new Object[]{TimeConvertor.CalendarToString(TimeConvertor.StringToCalendar(tempArr[0] + " " + tempArr[1])), tempArr[5], vocabularyHRS.get(vocabularyIndex).get(tempArr[3].substring(5, tempArr[3].length() - 1)),rowSessions.get(i-2) });
+                    SessionCount++;
+                }
+                vocabularyIndex++;
             }
-            Logger.log("Count of session rows in master:"+masterSessionCount,null);
+            Logger.log("Count of session rows"+SessionCount,null);
+            /*
             match =pattern.matcher(rowString2);
             while (match.find()){
 
@@ -227,18 +252,18 @@ public class SearchTraceFrame {
                 slaveSessionCount++;
             }
             Logger.log("Count of session rows in slave:"+slaveSessionCount,null);
+            */
 
         }
-		
+
         private Dictionary GetVocabulary(Config conf,String host){
             String command="zgrep [OffPost]Rating /data/brt/BRT/current/conf/brt_srv.xml | cut -d '\\\"' -f '4 5 6'";
-            String hoststr=conf.getHost()+host;
-            String result=SSHConector.bashExecutor(conf,conf.getHost()+host,command,"brt");
+            String result=SSHConector.bashExecutor(conf,host,command,"brt");
             Dictionary resultVocabulary=new Hashtable();
             String[] arrayREsult=result.split("\n");
             for (int i=0;i<arrayREsult.length;i++){
                 String[] tmp=arrayREsult[i].split("\"");
-                if(tmp.length==3)resultVocabulary.put(tmp[0],tmp[2]);
+                resultVocabulary.put(tmp[0],tmp[2]);
             }
             return resultVocabulary;
         }
@@ -269,10 +294,7 @@ public class SearchTraceFrame {
                 dateFromeSearch.add(Calendar.MINUTE,-10);
                 dateToSearch.add(Calendar.DAY_OF_MONTH,+1);
                 String command="find $(ps -aux|grep  [h]rs | grep [d]aemon | grep -ow '[-]ext_log /.*'| cut -d ' ' -f2|rev|cut -c 12- | rev) -mindepth 1  -newermt '"+TimeConvertor.CalendarToString(dateFromeSearch)+"' ! -newermt '"+TimeConvertor.CalendarToString(dateToSearch)+"' -exec zgrep '"+selectedSession+"' {} \\; | tail -1 | cut -d ' ' -f8";
-                //String hrsNumberString=(String)ResultTable.getValueAt(selectedRowIndex,2);
 
-                //String[] hrsNumberArray=hrsNumberString.split("GF_");
-                //String hrsNumber=hrsNumberArray[1].split(">")[0];
 
                 Logger.log("Command of searching cdr number:"+command,null);
                 String cdrNumber=SSHConector.bashExecutor(configuration,(String)ResultTable.getValueAt(selectedRowIndex,2),command,"hrs");
@@ -285,7 +307,7 @@ public class SearchTraceFrame {
                     Logger.log("HRS trace saved in hrs_trace.txt",null);
                 }
                 else{ JOptionPane.showMessageDialog(null,"HRS trace not found","HRS Trace",JOptionPane.WARNING_MESSAGE);
-                Logger.log("Hrs trace didn't found",null);
+                    Logger.log("Hrs trace didn't found",null);
 
                 }
 
@@ -323,31 +345,31 @@ public class SearchTraceFrame {
                 }
                 if(actionEvent.getSource()==GetInfoButton){
                     command="find /data/brt/BRT/current/logs/ -mindepth 1  -newermt '"+TimeConvertor.CalendarToString(dateFromeSearch)+"' ! -newermt '"+TimeConvertor.CalendarToString(dateToSearch)+"' -exec zgrep '"+selectedSession+"' {} \\; | grep hrs | cut -d '\\\"' -f '3 4 5'";}
-                    Logger.log("Command of searching session info:"+command,null);
+                Logger.log("Command of searching session info:"+command,null);
 
                 if(instanceBRT.toString().equals("LS0")){
                     if(actionEvent.getSource()==GetBrtTrace) {
-                        SSHConector.bashExecutorInFile(configuration,configuration.getHost()+"-lbrt-app02",command,"brt_trace.txt","brt");
+                        SSHConector.bashExecutorInFile(configuration,configuration.getMacro()+"-lbrt-app02",command,"brt_trace.txt","brt");
                         JOptionPane.showMessageDialog(null,"Brt trace saved in brt_trace.txt","BRT Trace",JOptionPane.INFORMATION_MESSAGE);
-                        Logger.log("Host:"+configuration.getHost()+"-lbrt-app02",null);
+                        Logger.log("Host:"+configuration.getMacro()+"-lbrt-app02",null);
 
                     }
                     if(actionEvent.getSource()==GetInfoButton){
-                        String result=SSHConector.bashExecutor(configuration,configuration.getHost()+"-lbrt-app02",command,"brt");
-                        Logger.log("Host:"+configuration.getHost()+"-lbrt-app02",null);
+                        String result=SSHConector.bashExecutor(configuration,configuration.getMacro()+"-lbrt-app02",command,"brt");
+                        Logger.log("Host:"+configuration.getMacro()+"-lbrt-app02",null);
                         new InfoFrame(result);
                     }
                 }
                 if(instanceBRT.toString().equals("LM0")){
                     if(actionEvent.getSource()==GetBrtTrace){
-                        SSHConector.bashExecutorInFile(configuration,configuration.getHost()+"-lbrt-app01",command,"brt_trace.txt","brt");
+                        SSHConector.bashExecutorInFile(configuration,configuration.getMacro()+"-lbrt-app01",command,"brt_trace.txt","brt");
                         JOptionPane.showMessageDialog(null,"Brt trace saved in brt_trace.txt","BRT Trace",JOptionPane.INFORMATION_MESSAGE);
-                        Logger.log("Host:"+configuration.getHost()+"-lbrt-app01",null);
+                        Logger.log("Host:"+configuration.getMacro()+"-lbrt-app01",null);
 
                     }
                     if(actionEvent.getSource()==GetInfoButton){
-                        String result=SSHConector.bashExecutor(configuration,configuration.getHost()+"-lbrt-app01",command,"brt");
-                        Logger.log("Host:"+configuration.getHost()+"-lbrt-app01",null);
+                        String result=SSHConector.bashExecutor(configuration,configuration.getMacro()+"-lbrt-app01",command,"brt");
+                        Logger.log("Host:"+configuration.getMacro()+"-lbrt-app01",null);
                         new InfoFrame(result);
                     }
                 }
